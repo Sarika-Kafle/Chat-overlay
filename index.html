@@ -138,6 +138,18 @@
   .platform-section { display: none; }
   .platform-section.active { display: block; }
 
+  .multi-note {
+    margin-bottom: 18px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.03);
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  .multi-note strong { color: var(--text); }
+
   /* ── FORM ELEMENTS ──────────────────────────── */
   .field-group { display: grid; gap: 12px; }
   .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -163,6 +175,7 @@
     outline: none;
     transition: border-color 0.2s, box-shadow 0.2s;
     width: 100%;
+    appearance: none;
     -webkit-appearance: none;
   }
   input::placeholder { color: var(--muted); opacity: 0.6; }
@@ -195,10 +208,14 @@
   .swatch-name { font-size: 11px; font-weight: 700; font-family: 'Rajdhani', sans-serif; letter-spacing: 0.05em; color: var(--muted); }
   .theme-swatch.selected .swatch-name { color: var(--accent); }
 
+  .theme-swatch.cyber .swatch-name { color: #7cfc98; }
+  .theme-swatch.sunset .swatch-name { color: #ffb86b; }
+  .theme-swatch.mono .swatch-name { color: #f8fafc; }
+
   /* ── RANGE ───────────────────────────────────── */
   .range-wrap { display: flex; align-items: center; gap: 12px; }
   input[type=range] {
-    flex: 1; -webkit-appearance: none; height: 4px; padding: 0;
+    flex: 1; appearance: none; -webkit-appearance: none; height: 4px; padding: 0;
     background: var(--surface2); border-color: transparent;
     border-radius: 4px; cursor: pointer;
     background: linear-gradient(90deg, var(--accent) var(--pct, 50%), var(--surface2) var(--pct, 50%));
@@ -368,6 +385,10 @@
   <div class="card">
     <div class="card-title"><span class="icon">🎙️</span> Platform Setup</div>
 
+    <div class="multi-note">
+      Fill in any combination of Twitch, YouTube, and Kick. The generated browser source URL can combine multiple live chats in one overlay, with avatars, badges, and event cards when the platform exposes that data.
+    </div>
+
     <div class="platform-tabs">
       <div class="ptab twitch active" onclick="switchTab('twitch')">
         <svg width="14" height="14" viewBox="0 0 16 16" fill="#9147ff"><path d="M2 1L1 4v10h4v2h2l2-2h3l4-4V1H2zm12 9l-2 2H8l-2 2V12H3V2h11v8zm-2-5H10v4h2V5zm-4 0H6v4h2V5z"/></svg>
@@ -414,6 +435,18 @@
         <label>Kick Channel Username</label>
         <input type="text" id="kick" placeholder="e.g. trainwreck, xqc…" oninput="buildUrl()">
         <div class="hint">✅ No API key needed — connects via Kick's public WebSocket</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BRAND / FALLBACK AVATAR -->
+  <div class="card">
+    <div class="card-title"><span class="icon">🖼️</span> Brand / Fallback Avatar</div>
+    <div class="field-group">
+      <div class="field">
+        <label>Avatar or Logo Image URL (optional)</label>
+        <input type="text" id="avatar" placeholder="https://…/your-logo.png" oninput="buildUrl()">
+        <div class="hint">Used when a platform does not provide profile images, and as a fallback badge/logo for event cards.</div>
       </div>
     </div>
   </div>
@@ -474,6 +507,30 @@
             </div>
             <div class="swatch-name">Minimal</div>
           </label>
+          <label class="theme-swatch cyber" data-val="cyber" onclick="selectTheme(this)">
+            <div class="swatch-colors">
+              <div class="swatch-dot" style="background:#7cfc98"></div>
+              <div class="swatch-dot" style="background:#22d3ee"></div>
+              <div class="swatch-dot" style="background:#050816"></div>
+            </div>
+            <div class="swatch-name">Cyber</div>
+          </label>
+          <label class="theme-swatch sunset" data-val="sunset" onclick="selectTheme(this)">
+            <div class="swatch-colors">
+              <div class="swatch-dot" style="background:#fb7185"></div>
+              <div class="swatch-dot" style="background:#fbbf24"></div>
+              <div class="swatch-dot" style="background:#140b07"></div>
+            </div>
+            <div class="swatch-name">Sunset</div>
+          </label>
+          <label class="theme-swatch mono" data-val="mono" onclick="selectTheme(this)">
+            <div class="swatch-colors">
+              <div class="swatch-dot" style="background:#f8fafc"></div>
+              <div class="swatch-dot" style="background:#94a3b8"></div>
+              <div class="swatch-dot" style="background:#020617"></div>
+            </div>
+            <div class="swatch-name">Mono</div>
+          </label>
         </div>
       </div>
 
@@ -484,6 +541,8 @@
             <option value="slide">Slide In ↗</option>
             <option value="pop">Pop 💥</option>
             <option value="fade">Fade ✨</option>
+            <option value="float">Float ⬆</option>
+            <option value="zoom">Zoom ⚡</option>
           </select>
         </div>
         <div class="field">
@@ -496,26 +555,26 @@
       </div>
 
       <div class="field">
-        <label>Font Size — <span id="size-label">14</span>px</label>
+        <label>Font Size — <span id="size-heading">14</span>px</label>
         <div class="range-wrap">
-          <input type="range" id="size" min="11" max="22" value="14" oninput="rangeUpdate(this,'size-label','px'); buildUrl()">
-          <div class="range-val" id="size-label">14</div>
+          <input type="range" id="size" min="11" max="22" value="14" oninput="rangeUpdate(this,'size-heading','px'); rangeUpdate(this,'size-value','px'); buildUrl()">
+          <div class="range-val" id="size-value">14</div>
         </div>
       </div>
 
       <div class="field">
-        <label>Message Duration — <span id="dur-label">25</span>s</label>
+        <label>Message Duration — <span id="dur-heading">25</span>s</label>
         <div class="range-wrap">
-          <input type="range" id="dur" min="5" max="120" value="25" oninput="rangeUpdate(this,'dur-label','s'); buildUrl()">
-          <div class="range-val" id="dur-label">25</div>
+          <input type="range" id="dur" min="5" max="120" value="25" oninput="rangeUpdate(this,'dur-heading','s'); rangeUpdate(this,'dur-value','s'); buildUrl()">
+          <div class="range-val" id="dur-value">25</div>
         </div>
       </div>
 
       <div class="field">
-        <label>Max Visible Messages — <span id="max-label">20</span></label>
+        <label>Max Visible Messages — <span id="max-heading">20</span></label>
         <div class="range-wrap">
-          <input type="range" id="max" min="5" max="50" value="20" oninput="rangeUpdate(this,'max-label',''); buildUrl()">
-          <div class="range-val" id="max-label">20</div>
+          <input type="range" id="max" min="5" max="50" value="20" oninput="rangeUpdate(this,'max-heading',''); rangeUpdate(this,'max-value',''); buildUrl()">
+          <div class="range-val" id="max-value">20</div>
         </div>
       </div>
 
@@ -627,19 +686,25 @@ document.querySelectorAll('input[type=range]').forEach(r => {
   r.style.setProperty('--pct', pct + '%');
 });
 
+function getOverlayBaseUrl() {
+  return new URL('overlay.html', location.href).href;
+}
+
 function buildUrl() {
-  const base = location.href.replace('index.html','') + 'overlay.html';
+  const base = getOverlayBaseUrl();
   const p = new URLSearchParams();
 
   const twitch = document.getElementById('twitch').value.trim();
   const yt_key = document.getElementById('yt_key').value.trim();
   const yt_vid = document.getElementById('yt_vid').value.trim();
   const kick   = document.getElementById('kick').value.trim();
+  const avatar = document.getElementById('avatar').value.trim();
 
   if (twitch)         p.set('twitch', twitch);
   if (yt_key)         p.set('yt_key', yt_key);
   if (yt_vid)         p.set('yt_vid', yt_vid);
   if (kick)           p.set('kick', kick);
+  if (avatar)         p.set('avatar', avatar);
 
   p.set('theme', selectedTheme);
   p.set('anim',  document.getElementById('anim').value);
@@ -661,11 +726,36 @@ function buildUrl() {
 function copyUrl() {
   const url = document.getElementById('url-out').textContent;
   if (!url) { alert('Fill in at least one platform first!'); return; }
-  navigator.clipboard.writeText(url).then(() => {
+  const showToast = () => {
     const t = document.getElementById('toast');
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 2500);
-  });
+  };
+
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(url).then(showToast).catch(() => fallbackCopy(url, showToast));
+    return;
+  }
+
+  fallbackCopy(url, showToast);
+}
+
+function fallbackCopy(url, onSuccess) {
+  const temp = document.createElement('textarea');
+  temp.value = url;
+  temp.setAttribute('readonly', 'true');
+  temp.style.position = 'fixed';
+  temp.style.left = '-9999px';
+  document.body.appendChild(temp);
+  temp.select();
+  try {
+    document.execCommand('copy');
+    onSuccess();
+  } catch {
+    alert('Copy failed. Please select the URL and copy it manually.');
+  } finally {
+    document.body.removeChild(temp);
+  }
 }
 
 function openPreview() {
@@ -675,11 +765,15 @@ function openPreview() {
 }
 
 function openDemo() {
-  const base = location.href.replace('index.html','') + 'overlay.html';
+  const base = getOverlayBaseUrl();
   const p = new URLSearchParams({ demo: '1', theme: selectedTheme,
     anim: document.getElementById('anim').value,
     pos:  document.getElementById('pos').value,
-    size: document.getElementById('size').value });
+    size: document.getElementById('size').value,
+    dur:  document.getElementById('dur').value,
+    max:  document.getElementById('max').value });
+  const avatar = document.getElementById('avatar').value.trim();
+  if (avatar) p.set('avatar', avatar);
   window.open(base + '?' + p.toString(), '_blank');
 }
 
