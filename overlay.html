@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StreamChat Overlay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --accent: #a855f7;
+    --accent2: #06b6d4;
+    --glow: rgba(168,85,247,0.4);
+    --glow2: rgba(6,182,212,0.3);
+    --msg-bg: rgba(10,10,20,0.75);
+    --msg-border: rgba(255,255,255,0.08);
+    --text: #e2e8f0;
+    --sub-text: #94a3b8;
+    --font-size: 14px;
+    --border-radius: 12px;
+    --badge-size: 18px;
+    --max-width: 340px;
+    --pos: right;
+    --duration: 25s;
+    --animation: slide;
+  }
+
+  /* ── THEMES ─────────────────────────────── */
+  body.theme-neon {
+    --accent: #f0abfc; --accent2: #67e8f9;
+    --glow: rgba(240,171,252,0.5); --glow2: rgba(103,232,249,0.4);
+    --msg-bg: rgba(5,5,15,0.82);
+  }
+  body.theme-fire {
+    --accent: #fb923c; --accent2: #fbbf24;
+    --glow: rgba(251,146,60,0.5); --glow2: rgba(251,191,36,0.4);
+    --msg-bg: rgba(15,5,0,0.82);
+  }
+  body.theme-ocean {
+    --accent: #34d399; --accent2: #38bdf8;
+    --glow: rgba(52,211,153,0.45); --glow2: rgba(56,189,248,0.35);
+    --msg-bg: rgba(0,10,20,0.8);
+  }
+  body.theme-rose {
+    --accent: #f472b6; --accent2: #fb7185;
+    --glow: rgba(244,114,182,0.5); --glow2: rgba(251,113,133,0.4);
+    --msg-bg: rgba(15,0,10,0.8);
+  }
+  body.theme-glass {
+    --accent: #c7d2fe; --accent2: #a5f3fc;
+    --glow: rgba(199,210,254,0.3); --glow2: rgba(165,243,252,0.25);
+    --msg-bg: rgba(255,255,255,0.07);
+    --msg-border: rgba(255,255,255,0.15);
+  }
+  body.theme-minimal {
+    --accent: #f8fafc; --accent2: #94a3b8;
+    --glow: transparent; --glow2: transparent;
+    --msg-bg: rgba(15,23,42,0.9);
+    --msg-border: rgba(255,255,255,0.05);
+  }
+
+  html, body {
+    background: transparent !important;
+    overflow: hidden;
+    font-family: 'Nunito', sans-serif;
+    font-size: var(--font-size);
+  }
+
+  #chat-wrap {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    width: var(--max-width);
+    max-height: calc(100vh - 32px);
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 6px;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  body.pos-left #chat-wrap { right: auto; left: 16px; }
+
+  /* ── MESSAGE CARD ─────────────────────────────── */
+  .msg {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    background: var(--msg-bg);
+    border: 1px solid var(--msg-border);
+    border-radius: var(--border-radius);
+    padding: 8px 10px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    position: relative;
+    overflow: hidden;
+    border-left: 3px solid var(--user-color, var(--accent));
+    box-shadow:
+      0 4px 24px rgba(0,0,0,0.4),
+      0 0 0 0.5px rgba(255,255,255,0.04),
+      inset 0 1px 0 rgba(255,255,255,0.06);
+    max-width: var(--max-width);
+    will-change: transform, opacity;
+    transition: opacity 0.5s ease;
+  }
+
+  /* shimmer line */
+  .msg::after {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%; width: 60%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent);
+    animation: shimmer 3s ease infinite;
+  }
+
+  /* ── ANIMATIONS ───────────────────────────── */
+  @keyframes slideInRight {
+    from { transform: translateX(120%); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
+  }
+  @keyframes slideInLeft {
+    from { transform: translateX(-120%); opacity: 0; }
+    to   { transform: translateX(0);     opacity: 1; }
+  }
+  @keyframes popIn {
+    0%   { transform: scale(0.6); opacity: 0; }
+    70%  { transform: scale(1.04); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes shimmer {
+    0%   { left: -100%; }
+    100% { left: 200%; }
+  }
+  @keyframes fadeOut { to { opacity: 0; transform: translateY(-8px); } }
+
+  body.anim-slide    .msg { animation: slideInRight 0.35s cubic-bezier(0.22,1,0.36,1) both; }
+  body.anim-slide.pos-left .msg { animation: slideInLeft 0.35s cubic-bezier(0.22,1,0.36,1) both; }
+  body.anim-pop      .msg { animation: popIn  0.4s cubic-bezier(0.34,1.56,0.64,1) both; }
+  body.anim-fade     .msg { animation: fadeIn 0.35s ease both; }
+  .msg.expired { animation: fadeOut 0.5s ease forwards !important; }
+
+  /* ── AVATAR ───────────────────────────────── */
+  .avatar {
+    flex-shrink: 0;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    color: #fff;
+    background: var(--user-color, var(--accent));
+    box-shadow: 0 0 8px var(--user-color, var(--glow));
+    text-transform: uppercase;
+    letter-spacing: 0;
+  }
+  .avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+
+  /* ── CONTENT ────────────────────────────── */
+  .msg-content { flex: 1; min-width: 0; }
+
+  .msg-header {
+    display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+    margin-bottom: 3px;
+  }
+
+  /* ── BADGES ─────────────────────────────── */
+  .badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: var(--badge-size); height: var(--badge-size);
+    border-radius: 4px; flex-shrink: 0;
+  }
+  .badge svg { width: 12px; height: 12px; }
+  .badge-broadcaster { background: #ef4444; }
+  .badge-moderator   { background: #10b981; }
+  .badge-subscriber  { background: #8b5cf6; }
+  .badge-vip         { background: #f59e0b; }
+  .badge-partner     { background: #4f46e5; }
+  .badge-prime       { background: #00a8ff; }
+  .badge-verified    { background: #1d9bf0; }
+  .badge-yt-member   { background: #ff0000; }
+
+  /* ── USERNAME ───────────────────────────── */
+  .username {
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    font-size: calc(var(--font-size) + 1px);
+    color: var(--user-color, var(--accent));
+    text-shadow: 0 0 8px var(--user-color, var(--glow));
+    letter-spacing: 0.02em;
+    line-height: 1;
+  }
+
+  .platform-tag {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.05em;
+    padding: 1px 5px; border-radius: 4px;
+    text-transform: uppercase;
+    background: rgba(255,255,255,0.1);
+    color: var(--sub-text);
+  }
+  .platform-tag.twitch  { background: rgba(145,71,255,0.25); color: #c084fc; }
+  .platform-tag.youtube { background: rgba(255,0,0,0.2);     color: #f87171; }
+  .platform-tag.kick    { background: rgba(83,185,79,0.2);   color: #4ade80; }
+
+  /* ── MESSAGE TEXT ───────────────────────── */
+  .msg-text {
+    color: var(--text);
+    font-size: var(--font-size);
+    line-height: 1.45;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+  .msg-text img.emote {
+    height: 24px; vertical-align: middle;
+    display: inline-block; margin: 0 1px;
+  }
+
+  /* ── SOURCE LOGO ────────────────────────── */
+  .platform-icon {
+    position: absolute; top: 6px; right: 8px;
+    opacity: 0.18; width: 14px; height: 14px;
+  }
+
+  /* ── SYSTEM EVENTS ──────────────────────── */
+  .msg.event {
+    background: linear-gradient(135deg, rgba(168,85,247,0.15), rgba(6,182,212,0.1));
+    border-left-color: var(--accent2);
+    border-color: rgba(168,85,247,0.2);
+  }
+  .msg.event .msg-text {
+    color: var(--accent2);
+    font-weight: 600;
+    font-size: calc(var(--font-size) - 1px);
+  }
+  .event-icon { font-size: 16px; margin-right: 2px; }
+
+  /* ── CONNECTION INDICATOR ───────────────── */
+  #status {
+    position: fixed; top: 8px; right: 8px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+    text-transform: uppercase;
+    display: flex; align-items: center; gap: 5px;
+    opacity: 0; transition: opacity 1s;
+  }
+  #status.visible { opacity: 1; }
+  .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #ef4444;
+    box-shadow: 0 0 6px #ef4444;
+  }
+  .dot.on { background: #22c55e; box-shadow: 0 0 6px #22c55e; animation: pulse 2s infinite; }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.5; }
+  }
+  #status span { color: var(--sub-text); }
+
+  /* ── NO-CHANNEL GUIDE ───────────────────── */
+  #guide {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 13px; color: rgba(255,255,255,0.35);
+    text-align: center; line-height: 1.8;
+    flex-direction: column; gap: 8px;
+  }
+  #guide h2 { font-size: 20px; color: var(--accent); letter-spacing: 0.05em; }
+  #guide code {
+    background: rgba(255,255,255,0.08); padding: 2px 8px;
+    border-radius: 4px; font-family: monospace; font-size: 11px;
+    color: var(--accent2);
+  }
+</style>
+</head>
+<body>
+
+<div id="status"><div class="dot" id="dot"></div><span id="status-text">Connecting…</span></div>
+<div id="chat-wrap"></div>
+<div id="guide" style="display:none">
+  <h2>🎙️ StreamChat Overlay</h2>
+  <p>Open <code>index.html</code> to configure your overlay</p>
+  <p>or add URL params:<br>
+  <code>overlay.html?twitch=CHANNEL</code></p>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════
+   CONFIG — parsed from URL query params
+═══════════════════════════════════════════ */
+const params  = new URLSearchParams(location.search);
+const TWITCH  = (params.get('twitch')  || '').toLowerCase().trim();
+const YT_KEY  = (params.get('yt_key')  || '').trim();
+const YT_VID  = (params.get('yt_vid')  || '').trim();
+const KICK    = (params.get('kick')    || '').toLowerCase().trim();
+const THEME   = params.get('theme')    || 'neon';
+const ANIM    = params.get('anim')     || 'slide';
+const POS     = params.get('pos')      || 'right';
+const FSIZE   = parseInt(params.get('size') || '14');
+const MAX_MSG = parseInt(params.get('max')  || '20');
+const MSG_DUR = parseInt(params.get('dur')  || '25') * 1000;
+const SHOW_ST = params.get('status')   !== '0';
+const DEMO    = params.get('demo')     === '1';
+
+/* Apply config */
+document.body.classList.add(`theme-${THEME}`, `anim-${ANIM}`, `pos-${POS}`);
+document.documentElement.style.setProperty('--font-size', FSIZE + 'px');
+
+const wrap   = document.getElementById('chat-wrap');
+const dot    = document.getElementById('dot');
+const stEl   = document.getElementById('status-text');
+const guide  = document.getElementById('guide');
+const statusEl = document.getElementById('status');
+
+if (SHOW_ST) statusEl.classList.add('visible');
+
+const hasSource = TWITCH || (YT_KEY && YT_VID) || KICK || DEMO;
+if (!hasSource) { guide.style.display = 'flex'; }
+
+/* ═══════════════════════════════════════════
+   BADGE SVGS
+═══════════════════════════════════════════ */
+const BADGE_SVG = {
+  broadcaster: `<svg viewBox="0 0 16 16" fill="none"><path d="M8 2l1.5 3 3.5.5-2.5 2.5.5 3.5L8 10l-3 1.5.5-3.5L3 5.5 6.5 5z" fill="#fff"/></svg>`,
+  moderator:   `<svg viewBox="0 0 16 16" fill="none"><path d="M8 2L5 6H3l2 4-1 4 4-2 4 2-1-4 2-4h-2z" fill="#fff"/></svg>`,
+  subscriber:  `<svg viewBox="0 0 16 16" fill="none"><path d="M8 3C5.2 3 3 5.2 3 8s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5zm0 2l1 2h2l-1.6 1.2.6 2L8 9.2 6 10.2l.6-2L5 7h2z" fill="#fff"/></svg>`,
+  vip:         `<svg viewBox="0 0 16 16" fill="none"><rect x="2" y="5" width="12" height="6" rx="3" fill="#fff"/><text x="8" y="10" font-size="5" fill="#f59e0b" text-anchor="middle" font-weight="bold">VIP</text></svg>`,
+  partner:     `<svg viewBox="0 0 16 16" fill="none"><path d="M8 2l1.5 3.5L13 6l-2.5 2.5.5 3.5L8 10.5 5 12l.5-3.5L3 6l3.5-.5z" fill="#fff"/></svg>`,
+  prime:       `<svg viewBox="0 0 16 16" fill="none"><text x="8" y="12" font-size="10" fill="#fff" text-anchor="middle">♛</text></svg>`,
+  verified:    `<svg viewBox="0 0 16 16" fill="none"><path d="M8 2L10 5h3.5L11 8l1.5 3.5L9 10l-1 3-1-3-3.5 1.5L5 8 2.5 5H6z" fill="#fff"/></svg>`,
+  'yt-member': `<svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5" fill="#fff"/><path d="M6 6h4v4H6z" fill="#ef4444"/></svg>`,
+};
+
+function makeBadge(type) {
+  const el = document.createElement('span');
+  el.className = `badge badge-${type}`;
+  el.title = type;
+  el.innerHTML = BADGE_SVG[type] || '';
+  return el;
+}
+
+/* Platform SVGs */
+const PLATFORM_SVG = {
+  twitch:  `<svg viewBox="0 0 16 16" fill="#9147ff"><path d="M2 1L1 4v10h4v2h2l2-2h3l4-4V1H2zm12 9l-2 2H8l-2 2V12H3V2h11v8zm-2-5H10v4h2V5zm-4 0H6v4h2V5z"/></svg>`,
+  youtube: `<svg viewBox="0 0 16 16" fill="#ff0000"><path d="M14.5 4.5s-.2-1.2-.7-1.7c-.7-.7-1.4-.7-1.8-.8C10.5 2 8 2 8 2s-2.5 0-4 .1c-.4 0-1.1.1-1.8.8-.5.5-.7 1.7-.7 1.7S1.3 5.9 1.3 7.2v1.2c0 1.3.2 2.7.2 2.7s.2 1.2.7 1.7c.7.7 1.6.6 2 .7 1.5.1 6 .2 6 .2s2.5 0 4-.2c.4-.1 1.1-.2 1.8-.8.5-.5.7-1.7.7-1.7s.2-1.3.2-2.7V7.2c0-1.3-.2-2.7-.2-2.7zM6.5 9.5v-4l4.5 2-4.5 2z"/></svg>`,
+  kick:    `<svg viewBox="0 0 16 16" fill="#53b94f"><rect x="2" y="2" width="12" height="12" rx="3"/><text x="8" y="11" font-size="8" fill="#fff" text-anchor="middle" font-weight="bold">K</text></svg>`,
+};
+
+/* ═══════════════════════════════════════════
+   COLORS
+═══════════════════════════════════════════ */
+const PALETTE = ['#ff6b6b','#ffa36b','#ffd93d','#6bcb77','#4ecdc4',
+                 '#45b7d1','#96ceb4','#ff6b9d','#c77dff','#74b9ff',
+                 '#a29bfe','#fd79a8','#55efc4','#fdcb6e','#e17055'];
+const userColors = {};
+function getColor(name) {
+  if (!userColors[name]) userColors[name] = PALETTE[Math.abs(hashCode(name)) % PALETTE.length];
+  return userColors[name];
+}
+function hashCode(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = Math.imul(31, h) + s.charCodeAt(i) | 0;
+  return h;
+}
+
+/* ═══════════════════════════════════════════
+   MESSAGE RENDERER
+═══════════════════════════════════════════ */
+let msgCount = 0;
+
+function addMessage({ user, color, text, badges = [], emotes = {}, platform = 'twitch', isEvent = false, eventIcon = '' }) {
+  const userColor = color || getColor(user);
+
+  const card = document.createElement('div');
+  card.className = 'msg' + (isEvent ? ' event' : '');
+  card.style.setProperty('--user-color', userColor);
+  card.id = 'msg-' + (++msgCount);
+
+  /* platform icon */
+  const pIcon = document.createElement('div');
+  pIcon.className = 'platform-icon';
+  pIcon.innerHTML = PLATFORM_SVG[platform] || '';
+  card.appendChild(pIcon);
+
+  /* avatar */
+  const av = document.createElement('div');
+  av.className = 'avatar';
+  av.style.background = userColor;
+  av.style.boxShadow = `0 0 10px ${userColor}88`;
+  av.textContent = user[0] || '?';
+  card.appendChild(av);
+
+  /* content */
+  const content = document.createElement('div');
+  content.className = 'msg-content';
+
+  /* header */
+  const header = document.createElement('div');
+  header.className = 'msg-header';
+
+  /* badges */
+  badges.forEach(b => header.appendChild(makeBadge(b)));
+
+  /* username */
+  const uname = document.createElement('span');
+  uname.className = 'username';
+  uname.style.color = userColor;
+  uname.style.textShadow = `0 0 8px ${userColor}88`;
+  uname.textContent = user;
+  header.appendChild(uname);
+
+  /* platform tag */
+  const ptag = document.createElement('span');
+  ptag.className = `platform-tag ${platform}`;
+  ptag.textContent = platform === 'youtube' ? 'YT' : platform;
+  header.appendChild(ptag);
+
+  content.appendChild(header);
+
+  /* text */
+  const textEl = document.createElement('div');
+  textEl.className = 'msg-text';
+  if (isEvent) {
+    textEl.innerHTML = `<span class="event-icon">${eventIcon}</span> ${escHtml(text)}`;
+  } else {
+    textEl.innerHTML = renderText(text, emotes);
+  }
+  content.appendChild(textEl);
+  card.appendChild(content);
+
+  /* insert at top of column-reverse flex (visually bottom) */
+  wrap.insertBefore(card, wrap.firstChild);
+
+  /* cap messages */
+  while (wrap.children.length > MAX_MSG) {
+    wrap.removeChild(wrap.lastChild);
+  }
+
+  /* auto expire */
+  if (MSG_DUR > 0) {
+    setTimeout(() => {
+      card.classList.add('expired');
+      setTimeout(() => card.remove(), 600);
+    }, MSG_DUR);
+  }
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function renderText(text, emotes) {
+  /* Build replacement map from emotes object {emote_id: [[start,end],...]} */
+  const replacements = [];
+  for (const [id, ranges] of Object.entries(emotes)) {
+    for (const [start, end] of ranges) {
+      replacements.push({ start, end, id });
+    }
+  }
+  replacements.sort((a, b) => b.start - a.start);
+
+  let chars = [...text]; /* handle unicode */
+  let result = escHtml(text);
+
+  if (replacements.length) {
+    /* Rebuild with img tags */
+    let parts = [...text];
+    replacements.forEach(({ start, end, id }) => {
+      const emoteText = parts.slice(start, end + 1).join('');
+      const img = `<img class="emote" src="https://static-cdn.jtvnw.net/emoticons/v2/${id}/default/dark/1.0" alt="${escHtml(emoteText)}" title="${escHtml(emoteText)}">`;
+      parts.splice(start, end - start + 1, img);
+    });
+    result = parts.join('');
+  }
+
+  /* Render standard emoji — they render natively, just pass through */
+  return result;
+}
+
+/* ═══════════════════════════════════════════
+   STATUS HELPER
+═══════════════════════════════════════════ */
+function setStatus(text, connected) {
+  stEl.textContent = text;
+  dot.className = 'dot' + (connected ? ' on' : '');
+}
+
+/* ═══════════════════════════════════════════
+   TWITCH IRC OVER WEBSOCKET
+═══════════════════════════════════════════ */
+function connectTwitch(channel) {
+  setStatus('Twitch: connecting…', false);
+  const ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
+
+  ws.onopen = () => {
+    ws.send('CAP REQ :twitch.tv/tags twitch.tv/commands\r\n');
+    ws.send(`PASS SCHMOOPIIE\r\nNICK justinfan${Math.floor(Math.random()*99999)}\r\n`);
+    ws.send(`JOIN #${channel}\r\n`);
+    setStatus(`Twitch: #${channel}`, true);
+    guide.style.display = 'none';
+  };
+
+  ws.onmessage = ({ data }) => {
+    data.split('\r\n').forEach(line => {
+      if (!line) return;
+      if (line.startsWith('PING')) { ws.send('PONG :tmi.twitch.tv\r\n'); return; }
+
+      /* Parse IRC tags */
+      let tags = {}, rest = line;
+      if (line.startsWith('@')) {
+        const sp = line.indexOf(' ');
+        const rawTags = line.slice(1, sp);
+        rest = line.slice(sp + 1);
+        rawTags.split(';').forEach(t => {
+          const [k, v] = t.split('=');
+          tags[k] = v || '';
+        });
+      }
+
+      /* PRIVMSG */
+      if (rest.includes('PRIVMSG')) {
+        const match = rest.match(/^:(\w+)!\w+@\w+\.tmi\.twitch\.tv PRIVMSG #\w+ :(.+)$/);
+        if (!match) return;
+        const [, user, message] = match;
+
+        /* Parse emotes tag: "id:start-end,start-end/id:..." */
+        const emotes = {};
+        if (tags['emotes']) {
+          tags['emotes'].split('/').forEach(part => {
+            if (!part) return;
+            const [id, ranges] = part.split(':');
+            emotes[id] = ranges.split(',').map(r => r.split('-').map(Number));
+          });
+        }
+
+        /* Badges */
+        const badges = [];
+        if (tags['badges']) {
+          const bRaw = tags['badges'];
+          if (bRaw.includes('broadcaster')) badges.push('broadcaster');
+          if (bRaw.includes('moderator'))   badges.push('moderator');
+          if (bRaw.includes('subscriber'))  badges.push('subscriber');
+          if (bRaw.includes('premium'))     badges.push('prime');
+          if (bRaw.includes('partner'))     badges.push('partner');
+          if (bRaw.includes('vip'))         badges.push('vip');
+        }
+
+        const color = tags['color'] || null;
+
+        addMessage({ user, color, text: message, badges, emotes, platform: 'twitch' });
+      }
+
+      /* USERNOTICE (subs, raids, etc.) */
+      if (rest.includes('USERNOTICE')) {
+        const msgtypes = { 'sub': ['🌟','New Sub'], 'resub': ['🔁','Re-sub'],
+          'subgift': ['🎁','Gift Sub'], 'raid': ['⚡','Raid!'],
+          'bits': ['💎','Cheer'] };
+        const type = tags['msg-id'] || '';
+        const display = tags['display-name'] || '?';
+        const systemMsg = tags['system-msg']?.replace(/\\s/g,' ') || '';
+        if (msgtypes[type]) {
+          const [icon, label] = msgtypes[type];
+          addMessage({
+            user: display, text: systemMsg || `${label} by ${display}`,
+            badges: [], emotes: {}, platform: 'twitch',
+            isEvent: true, eventIcon: icon
+          });
+        }
+      }
+    });
+  };
+
+  ws.onerror = () => setStatus('Twitch: error', false);
+  ws.onclose = () => {
+    setStatus('Twitch: reconnecting…', false);
+    setTimeout(() => connectTwitch(channel), 5000);
+  };
+}
+
+/* ═══════════════════════════════════════════
+   YOUTUBE LIVE CHAT POLLING
+═══════════════════════════════════════════ */
+async function connectYouTube(videoId, apiKey) {
+  setStatus('YouTube: connecting…', false);
+  try {
+    const r = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id=${videoId}&key=${apiKey}`);
+    const d = await r.json();
+    const chatId = d.items?.[0]?.liveStreamingDetails?.activeLiveChatId;
+    if (!chatId) { setStatus('YouTube: no live chat found', false); return; }
+    setStatus('YouTube: connected', true);
+    guide.style.display = 'none';
+    let pageToken = '';
+    async function poll() {
+      try {
+        const url = `https://www.googleapis.com/youtube/v3/liveChat/messages?liveChatId=${encodeURIComponent(chatId)}&part=snippet,authorDetails&key=${apiKey}${pageToken ? '&pageToken=' + pageToken : ''}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.error) { setStatus('YouTube: API error', false); return; }
+        pageToken = data.nextPageToken || '';
+        (data.items || []).forEach(item => {
+          const author = item.authorDetails?.displayName || 'User';
+          const text   = item.snippet?.displayMessage || '';
+          const badges = [];
+          if (item.authorDetails?.isChatOwner)     badges.push('broadcaster');
+          if (item.authorDetails?.isChatModerator) badges.push('moderator');
+          if (item.authorDetails?.isChatSponsor)   badges.push('yt-member');
+          addMessage({ user: author, text, badges, emotes: {}, platform: 'youtube' });
+        });
+        setTimeout(poll, Math.max(data.pollingIntervalMillis || 5000, 3000));
+      } catch { setTimeout(poll, 8000); }
+    }
+    poll();
+  } catch { setStatus('YouTube: failed to connect', false); }
+}
+
+/* ═══════════════════════════════════════════
+   KICK CHAT (Pusher-based)
+═══════════════════════════════════════════ */
+async function connectKick(channel) {
+  setStatus('Kick: connecting…', false);
+  try {
+    const r = await fetch(`https://kick.com/api/v2/channels/${channel}`);
+    const d = await r.json();
+    const chatId = d?.id;
+    if (!chatId) { setStatus('Kick: channel not found', false); return; }
+    /* Kick uses Pusher — connect via WebSocket */
+    const ws = new WebSocket('wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679?protocol=7&client=js&version=7.4.0&flash=false');
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ event:'pusher:subscribe', data:{ auth:'', channel:`chatrooms.${chatId}.v2` } }));
+      setStatus(`Kick: #${channel}`, true);
+      guide.style.display = 'none';
+    };
+    ws.onmessage = ({ data }) => {
+      try {
+        const ev = JSON.parse(data);
+        if (ev.event === 'App\\Events\\ChatMessageEvent') {
+          const msg = JSON.parse(ev.data);
+          const user = msg.sender?.username || 'User';
+          const text = msg.content || '';
+          const badges = [];
+          if (msg.sender?.is_broadcaster) badges.push('broadcaster');
+          if (msg.sender?.is_moderator)   badges.push('moderator');
+          if (msg.sender?.is_subscribed)  badges.push('subscriber');
+          addMessage({ user, text, badges, emotes: {}, platform: 'kick' });
+        }
+      } catch {}
+    };
+    ws.onclose = () => { setStatus('Kick: reconnecting…', false); setTimeout(() => connectKick(channel), 5000); };
+  } catch { setStatus('Kick: error', false); }
+}
+
+/* ═══════════════════════════════════════════
+   DEMO MODE
+═══════════════════════════════════════════ */
+const DEMO_MSGS = [
+  { user: 'StreamFan99',  color: '#ff6b6b', text: '🔥 LET\'S GOOO this stream is insane!!', badges: ['subscriber'] },
+  { user: 'ProGamer_X',   color: '#4ecdc4', text: 'PogChamp what a play omg',              badges: ['moderator'] },
+  { user: 'CoolViewer',   color: '#ffd93d', text: 'First time here, loving the vibe! 👀',  badges: [] },
+  { user: 'ChatMod',      color: '#6bcb77', text: 'Welcome everyone to the stream! 🎉',    badges: ['moderator','subscriber'] },
+  { user: 'TwitchFan42',  color: '#c77dff', text: 'can you do a face reveal please 😂',    badges: [] },
+  { user: 'NightOwl',     color: '#74b9ff', text: 'This music is 🔥🔥🔥',                badges: ['subscriber'] },
+  { user: 'EliteGamer',   color: '#fd79a8', text: 'GG EZ no re Kappa',                     badges: ['subscriber','vip'] },
+  { user: 'SuperSub',     color: '#a29bfe', text: '✨ just subbed!! amazing content',       badges: ['subscriber'] },
+  { user: 'Broadcaster',  color: '#ff6b6b', text: 'Thanks for watching everyone! 🙏',      badges: ['broadcaster'] },
+  { user: 'NewViewer22',  color: '#55efc4', text: 'hello from Germany!! 🇩🇪',              badges: [] },
+];
+
+function runDemo() {
+  guide.style.display = 'none';
+  setStatus('DEMO MODE', true);
+  let i = 0;
+  function next() {
+    const m = DEMO_MSGS[i % DEMO_MSGS.length];
+    addMessage({ ...m, emotes: {}, platform: i % 2 === 0 ? 'twitch' : 'youtube' });
+    i++;
+    setTimeout(next, 1500 + Math.random() * 2000);
+  }
+  next();
+}
+
+/* ═══════════════════════════════════════════
+   BOOT
+═══════════════════════════════════════════ */
+if (DEMO)                 runDemo();
+if (TWITCH)               connectTwitch(TWITCH);
+if (YT_KEY && YT_VID)     connectYouTube(YT_VID, YT_KEY);
+if (KICK)                 connectKick(KICK);
+if (!hasSource && !DEMO)  setStatus('No source', false);
+</script>
+</body>
+</html>

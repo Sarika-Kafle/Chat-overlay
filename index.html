@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StreamChat Overlay — Setup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Nunito:wght@400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #070b14;
+    --surface: #0d1424;
+    --surface2: #131d32;
+    --border: rgba(255,255,255,0.07);
+    --accent: #a855f7;
+    --accent2: #06b6d4;
+    --accent3: #f472b6;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --glow: rgba(168,85,247,0.35);
+    --glow2: rgba(6,182,212,0.25);
+    --radius: 14px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Nunito', sans-serif;
+    font-size: 15px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── BACKGROUND ────────────────────────────── */
+  .bg-grid {
+    position: fixed; inset: 0; z-index: 0;
+    background-image:
+      linear-gradient(rgba(168,85,247,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(168,85,247,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    mask-image: radial-gradient(ellipse 80% 80% at 50% 0%, black 40%, transparent 100%);
+  }
+  .bg-orb1, .bg-orb2 {
+    position: fixed; border-radius: 50%; filter: blur(80px); z-index: 0; pointer-events: none;
+  }
+  .bg-orb1 { width: 500px; height: 500px; top: -200px; left: -100px; background: rgba(168,85,247,0.12); }
+  .bg-orb2 { width: 400px; height: 400px; bottom: -100px; right: -100px; background: rgba(6,182,212,0.1); }
+
+  /* ── LAYOUT ─────────────────────────────────── */
+  .page { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  /* ── HEADER ─────────────────────────────────── */
+  header { text-align: center; margin-bottom: 48px; }
+
+  .logo {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-family: 'Rajdhani', sans-serif; font-weight: 700;
+    font-size: 13px; letter-spacing: 0.15em; text-transform: uppercase;
+    color: var(--muted);
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 6px 14px; border-radius: 20px; margin-bottom: 24px;
+  }
+  .logo-dot { width: 6px; height: 6px; background: var(--accent); border-radius: 50; box-shadow: 0 0 8px var(--accent); animation: blink 2s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  h1 {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: clamp(36px, 7vw, 64px);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1;
+    margin-bottom: 12px;
+    background: linear-gradient(135deg, #fff 0%, var(--accent) 50%, var(--accent2) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .tagline {
+    color: var(--muted); font-size: 16px; font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+
+  /* ── CARD ───────────────────────────────────── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .card:hover { border-color: rgba(168,85,247,0.2); }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(168,85,247,0.3), transparent);
+  }
+
+  .card-title {
+    font-family: 'Rajdhani', sans-serif; font-weight: 700;
+    font-size: 18px; letter-spacing: 0.05em; text-transform: uppercase;
+    display: flex; align-items: center; gap: 8px; margin-bottom: 20px;
+    color: var(--accent);
+  }
+  .card-title .icon { font-size: 20px; }
+  .card-title .badge-new {
+    font-size: 9px; background: var(--accent); color: #fff;
+    padding: 2px 7px; border-radius: 20px; letter-spacing: 0.08em;
+  }
+
+  /* ── PLATFORM TABS ──────────────────────────── */
+  .platform-tabs {
+    display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;
+  }
+  .ptab {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 16px; border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    cursor: pointer; font-size: 13px; font-weight: 700;
+    letter-spacing: 0.04em; transition: all 0.2s;
+    font-family: 'Rajdhani', sans-serif;
+    user-select: none;
+  }
+  .ptab:hover { border-color: rgba(255,255,255,0.15); }
+  .ptab.active.twitch  { background: rgba(145,71,255,0.2); border-color: #9147ff; color: #bf94ff; }
+  .ptab.active.youtube { background: rgba(255,0,0,0.15);   border-color: #ff0000; color: #f87171; }
+  .ptab.active.kick    { background: rgba(83,185,79,0.15);  border-color: #53b94f; color: #4ade80; }
+
+  .platform-section { display: none; }
+  .platform-section.active { display: block; }
+
+  /* ── FORM ELEMENTS ──────────────────────────── */
+  .field-group { display: grid; gap: 12px; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 600px) { .field-row { grid-template-columns: 1fr; } }
+
+  .field { display: flex; flex-direction: column; gap: 6px; }
+
+  label {
+    font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--muted);
+    font-family: 'Rajdhani', sans-serif;
+  }
+
+  input, select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'Nunito', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+    -webkit-appearance: none;
+  }
+  input::placeholder { color: var(--muted); opacity: 0.6; }
+  input:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(168,85,247,0.15);
+  }
+  select { cursor: pointer; }
+  select option { background: #1a1a2e; }
+
+  /* ── THEME SWATCHES ──────────────────────────── */
+  .theme-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  }
+  @media (max-width: 500px) { .theme-grid { grid-template-columns: 1fr 1fr; } }
+
+  .theme-swatch {
+    border: 2px solid var(--border);
+    border-radius: 10px; padding: 10px 8px;
+    cursor: pointer; transition: all 0.2s;
+    text-align: center; position: relative;
+    background: var(--surface2);
+    user-select: none;
+  }
+  .theme-swatch:hover { border-color: rgba(255,255,255,0.2); transform: translateY(-1px); }
+  .theme-swatch.selected { border-color: var(--accent); box-shadow: 0 0 16px rgba(168,85,247,0.3); }
+  .theme-swatch input { display: none; }
+  .swatch-colors { display: flex; gap: 3px; justify-content: center; margin-bottom: 6px; }
+  .swatch-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .swatch-name { font-size: 11px; font-weight: 700; font-family: 'Rajdhani', sans-serif; letter-spacing: 0.05em; color: var(--muted); }
+  .theme-swatch.selected .swatch-name { color: var(--accent); }
+
+  /* ── RANGE ───────────────────────────────────── */
+  .range-wrap { display: flex; align-items: center; gap: 12px; }
+  input[type=range] {
+    flex: 1; -webkit-appearance: none; height: 4px; padding: 0;
+    background: var(--surface2); border-color: transparent;
+    border-radius: 4px; cursor: pointer;
+    background: linear-gradient(90deg, var(--accent) var(--pct, 50%), var(--surface2) var(--pct, 50%));
+    box-shadow: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+    background: var(--accent); box-shadow: 0 0 8px var(--glow); cursor: pointer;
+    border: 2px solid #fff;
+  }
+  .range-val {
+    font-family: 'Space Mono', monospace; font-size: 12px;
+    color: var(--accent); min-width: 30px; text-align: center;
+    background: var(--surface2); border-radius: 6px; padding: 3px 8px;
+    border: 1px solid var(--border);
+  }
+
+  /* ── TOGGLE ─────────────────────────────────── */
+  .toggle-field { display: flex; align-items: center; justify-content: space-between; }
+  .toggle-label { font-size: 13px; font-weight: 600; color: var(--text); }
+  .toggle-desc  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .toggle {
+    position: relative; width: 40px; height: 22px;
+    flex-shrink: 0; cursor: pointer;
+  }
+  .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+  .toggle-track {
+    position: absolute; inset: 0; border-radius: 11px;
+    background: var(--surface2); border: 1px solid var(--border);
+    transition: all 0.2s;
+  }
+  .toggle input:checked ~ .toggle-track { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 8px var(--glow); }
+  .toggle-thumb {
+    position: absolute; top: 3px; left: 3px; width: 16px; height: 16px;
+    border-radius: 50%; background: #fff; transition: transform 0.2s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  }
+  .toggle input:checked ~ .toggle-thumb { transform: translateX(18px); }
+
+  /* ── OUTPUT ─────────────────────────────────── */
+  #output-card {
+    background: linear-gradient(135deg, rgba(168,85,247,0.1), rgba(6,182,212,0.07));
+    border: 1px solid rgba(168,85,247,0.25);
+  }
+  .url-box {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 14px;
+    font-family: 'Space Mono', monospace; font-size: 12px;
+    color: var(--accent2); word-break: break-all; line-height: 1.6;
+    margin-bottom: 12px; min-height: 60px;
+    transition: all 0.2s;
+  }
+  .url-box:empty::before { content: 'Fill in at least one platform above…'; color: var(--muted); font-style: italic; }
+
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 10px 18px; border-radius: 10px; border: none;
+    font-family: 'Rajdhani', sans-serif; font-weight: 700;
+    font-size: 14px; letter-spacing: 0.05em; text-transform: uppercase;
+    cursor: pointer; transition: all 0.2s; white-space: nowrap;
+    text-decoration: none;
+  }
+  .btn-primary {
+    background: var(--accent); color: #fff;
+    box-shadow: 0 4px 20px rgba(168,85,247,0.4);
+  }
+  .btn-primary:hover { background: #9333ea; transform: translateY(-1px); box-shadow: 0 6px 28px rgba(168,85,247,0.5); }
+  .btn-secondary {
+    background: var(--surface2); color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-ghost {
+    background: transparent; color: var(--muted);
+    border: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .btn-ghost:hover { color: var(--text); border-color: rgba(255,255,255,0.15); }
+
+  /* ── INSTRUCTIONS ───────────────────────────── */
+  .steps {
+    counter-reset: step;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .step {
+    display: flex; align-items: flex-start; gap: 12px;
+    background: var(--surface2); border-radius: 10px; padding: 12px 14px;
+    border: 1px solid var(--border);
+  }
+  .step-num {
+    counter-increment: step;
+    width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
+    background: var(--accent); color: #fff;
+    font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .step-text { font-size: 13px; line-height: 1.5; padding-top: 2px; }
+  .step-text strong { color: var(--accent2); }
+
+  /* ── HOSTING INFO ───────────────────────────── */
+  .host-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 500px) { .host-grid { grid-template-columns: 1fr; } }
+
+  .host-card {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px; transition: all 0.2s;
+  }
+  .host-card:hover { border-color: rgba(255,255,255,0.15); transform: translateY(-1px); }
+  .host-name {
+    font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 16px;
+    letter-spacing: 0.04em; margin-bottom: 4px;
+  }
+  .host-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .host-badge {
+    display: inline-block; font-size: 9px; font-weight: 700; letter-spacing: 0.08em;
+    padding: 2px 7px; border-radius: 10px; text-transform: uppercase; margin-top: 6px;
+  }
+  .hb-free { background: rgba(52,211,153,0.2); color: #34d399; }
+  .hb-best { background: rgba(168,85,247,0.2); color: #a855f7; }
+
+  /* ── TOAST ───────────────────────────────────── */
+  #toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: #22c55e; color: #fff;
+    font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 14px;
+    letter-spacing: 0.05em; padding: 10px 20px; border-radius: 10px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+    transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    z-index: 999; white-space: nowrap;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ── MISC ────────────────────────────────────── */
+  .divider { height: 1px; background: var(--border); margin: 8px 0; }
+  .hint { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .twitch-color { color: #bf94ff; }
+  .yt-color { color: #f87171; }
+  .kick-color { color: #4ade80; }
+
+  @keyframes fadeInUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+  .card { animation: fadeInUp 0.4s ease both; }
+  .card:nth-child(2) { animation-delay: 0.05s; }
+  .card:nth-child(3) { animation-delay: 0.10s; }
+  .card:nth-child(4) { animation-delay: 0.15s; }
+  .card:nth-child(5) { animation-delay: 0.20s; }
+  .card:nth-child(6) { animation-delay: 0.25s; }
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-orb1"></div>
+<div class="bg-orb2"></div>
+
+<div class="page">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo"><div class="logo-dot"></div> Stream Overlay Setup</div>
+    <h1>StreamChat Overlay</h1>
+    <p class="tagline">Animated • Multi-Platform • Free • No Login Required</p>
+  </header>
+
+  <!-- PLATFORMS -->
+  <div class="card">
+    <div class="card-title"><span class="icon">🎙️</span> Platform Setup</div>
+
+    <div class="platform-tabs">
+      <div class="ptab twitch active" onclick="switchTab('twitch')">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="#9147ff"><path d="M2 1L1 4v10h4v2h2l2-2h3l4-4V1H2zm12 9l-2 2H8l-2 2V12H3V2h11v8zm-2-5H10v4h2V5zm-4 0H6v4h2V5z"/></svg>
+        Twitch
+      </div>
+      <div class="ptab youtube" onclick="switchTab('youtube')">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="#ff0000"><path d="M14.5 4.5s-.2-1.2-.7-1.7c-.7-.7-1.4-.7-1.8-.8C10.5 2 8 2 8 2s-2.5 0-4 .1c-.4 0-1.1.1-1.8.8-.5.5-.7 1.7-.7 1.7S1.3 5.9 1.3 7.2v1.2c0 1.3.2 2.7.2 2.7s.2 1.2.7 1.7c.7.7 1.6.6 2 .7 1.5.1 6 .2 6 .2s2.5 0 4-.2c.4-.1 1.1-.2 1.8-.8.5-.5.7-1.7.7-1.7s.2-1.3.2-2.7V7.2c0-1.3-.2-2.7-.2-2.7zM6.5 9.5v-4l4.5 2-4.5 2z"/></svg>
+        YouTube
+      </div>
+      <div class="ptab kick" onclick="switchTab('kick')">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="#53b94f"><rect x="2" y="2" width="12" height="12" rx="3"/><text x="8" y="11" font-size="8" fill="#fff" text-anchor="middle" font-weight="bold">K</text></svg>
+        Kick
+      </div>
+    </div>
+
+    <!-- TWITCH -->
+    <div class="platform-section active" id="section-twitch">
+      <div class="field">
+        <label>Twitch Channel Username</label>
+        <input type="text" id="twitch" placeholder="e.g. ninja, shroud, xqc…" oninput="buildUrl()">
+        <div class="hint">✅ No API key needed — connects anonymously via Twitch IRC</div>
+      </div>
+    </div>
+
+    <!-- YOUTUBE -->
+    <div class="platform-section" id="section-youtube">
+      <div class="field-group">
+        <div class="field">
+          <label>YouTube Data API v3 Key</label>
+          <input type="text" id="yt_key" placeholder="AIzaSy…" oninput="buildUrl()">
+          <div class="hint">Get free at <strong>console.cloud.google.com</strong> → APIs & Services → YouTube Data API v3</div>
+        </div>
+        <div class="field">
+          <label>Live Video ID</label>
+          <input type="text" id="yt_vid" placeholder="dQw4w9WgXcQ (from URL)" oninput="buildUrl()">
+          <div class="hint">Copy the ID after <code>?v=</code> in your YouTube live URL</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KICK -->
+    <div class="platform-section" id="section-kick">
+      <div class="field">
+        <label>Kick Channel Username</label>
+        <input type="text" id="kick" placeholder="e.g. trainwreck, xqc…" oninput="buildUrl()">
+        <div class="hint">✅ No API key needed — connects via Kick's public WebSocket</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- APPEARANCE -->
+  <div class="card">
+    <div class="card-title"><span class="icon">🎨</span> Appearance</div>
+
+    <div class="field-group">
+      <div class="field">
+        <label>Theme</label>
+        <div class="theme-grid" id="theme-grid">
+          <label class="theme-swatch selected" data-val="neon" onclick="selectTheme(this)">
+            <div class="swatch-colors">
+              <div class="swatch-dot" style="background:#f0abfc"></div>
+              <div class="swatch-dot" style="background:#67e8f9"></div>
+              <div class="swatch-dot" style="background:#0a0a14"></div>
+            </div>
+            <div class="swatch-name">Neon</div>
+          </label>
+          <label class="theme-swatch" data-val="fire" onclick="selectTheme(this)">
+            <div class="swatch-colors">
+              <div class="swatch-dot" style="background:#fb923c"></div>
+              <div class="swatch-dot" style="background:#fbbf24"></div>
+              <div class="swatch-dot" style="background:#0f0500"></div>
+            </div>
+            <div class="swatch-name">Fire</div>
+          </label>
+          <label class="theme-swatch" data-val="ocean" onclick="selectTheme(this)">
+            <div class="swatch-colors">
+              <div class="swatch-dot" style="background:#34d399"></div>
+              <div class="swatch-dot" style="background:#38bdf8"></div>
+              <div class="swatch-dot" style="background:#000a14"></div>
+            </div>
+            <div class="swatch-name">Ocean</div>
+          </label>
+          <label class="theme-swatch" data-val="rose" onclick="selectTheme(this)">
+            <div class="swatch-colors">
+              <div class="swatch-dot" style="background:#f472b6"></div>
+              <div class="swatch-dot" style="background:#fb7185"></div>
+              <div class="swatch-dot" style="background:#0f000a"></div>
+            </div>
+            <div class="swatch-name">Rose</div>
+          </label>
+          <label class="theme-swatch" data-val="glass" onclick="selectTheme(this)">
+            <div class="swatch-colors">
+              <div class="swatch-dot" style="background:#c7d2fe"></div>
+              <div class="swatch-dot" style="background:#a5f3fc"></div>
+              <div class="swatch-dot" style="background:rgba(255,255,255,0.1)"></div>
+            </div>
+            <div class="swatch-name">Glass</div>
+          </label>
+          <label class="theme-swatch" data-val="minimal" onclick="selectTheme(this)">
+            <div class="swatch-colors">
+              <div class="swatch-dot" style="background:#f8fafc"></div>
+              <div class="swatch-dot" style="background:#94a3b8"></div>
+              <div class="swatch-dot" style="background:#0f1729"></div>
+            </div>
+            <div class="swatch-name">Minimal</div>
+          </label>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label>Animation Style</label>
+          <select id="anim" onchange="buildUrl()">
+            <option value="slide">Slide In ↗</option>
+            <option value="pop">Pop 💥</option>
+            <option value="fade">Fade ✨</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Position</label>
+          <select id="pos" onchange="buildUrl()">
+            <option value="right">Right ▶</option>
+            <option value="left">Left ◀</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Font Size — <span id="size-label">14</span>px</label>
+        <div class="range-wrap">
+          <input type="range" id="size" min="11" max="22" value="14" oninput="rangeUpdate(this,'size-label','px'); buildUrl()">
+          <div class="range-val" id="size-label">14</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Message Duration — <span id="dur-label">25</span>s</label>
+        <div class="range-wrap">
+          <input type="range" id="dur" min="5" max="120" value="25" oninput="rangeUpdate(this,'dur-label','s'); buildUrl()">
+          <div class="range-val" id="dur-label">25</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Max Visible Messages — <span id="max-label">20</span></label>
+        <div class="range-wrap">
+          <input type="range" id="max" min="5" max="50" value="20" oninput="rangeUpdate(this,'max-label',''); buildUrl()">
+          <div class="range-val" id="max-label">20</div>
+        </div>
+      </div>
+
+      <div class="toggle-field">
+        <div>
+          <div class="toggle-label">Show Connection Status</div>
+          <div class="toggle-desc">Small indicator dot in the corner</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="status" checked onchange="buildUrl()">
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- OUTPUT URL -->
+  <div class="card" id="output-card">
+    <div class="card-title"><span class="icon">🔗</span> Your Browser Source URL</div>
+    <div class="url-box" id="url-out"></div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="copyUrl()">📋 Copy URL</button>
+      <button class="btn btn-secondary" onclick="openPreview()">👁️ Preview</button>
+      <button class="btn btn-ghost" onclick="openDemo()">🎭 Demo Mode</button>
+    </div>
+  </div>
+
+  <!-- HOW TO USE -->
+  <div class="card">
+    <div class="card-title"><span class="icon">📖</span> How to Add to OBS / Streamlabs</div>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><div class="step-text">Host your files (see hosting section below) and get your <strong>overlay.html URL</strong></div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">In OBS: <strong>Sources → + → Browser Source</strong><br>In Streamlabs: <strong>Sources → + → Browser Source</strong></div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text">Paste your generated URL into the <strong>URL field</strong></div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-text">Set Width: <strong>400</strong>, Height: <strong>800</strong> (or full canvas). Enable <strong>"Custom CSS"</strong> → add <code>body { background: transparent !important; }</code> if needed</div></div>
+      <div class="step"><div class="step-num">5</div><div class="step-text">Click <strong>OK</strong> — chat appears on your stream! 🎉 Drag to position it anywhere.</div></div>
+    </div>
+  </div>
+
+  <!-- HOSTING -->
+  <div class="card">
+    <div class="card-title"><span class="icon">☁️</span> Free Hosting Options</div>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:14px">All options below are 100% free and will host your overlay as long as you need it.</p>
+    <div class="host-grid">
+      <div class="host-card">
+        <div class="host-name">⭐ GitHub Pages</div>
+        <div class="host-desc">Upload both files to a GitHub repo. Enable Pages in Settings → Pages. URL: <code>yourname.github.io/repo/overlay.html</code></div>
+        <span class="host-badge hb-free">Free Forever</span>
+        <span class="host-badge hb-best">Recommended</span>
+      </div>
+      <div class="host-card">
+        <div class="host-name">⚡ Netlify Drop</div>
+        <div class="host-desc">Go to <strong>netlify.com/drop</strong>, drag & drop your folder. Get a live URL instantly — no signup needed.</div>
+        <span class="host-badge hb-free">Free Forever</span>
+      </div>
+      <div class="host-card">
+        <div class="host-name">▲ Vercel</div>
+        <div class="host-desc">Run <code>npx vercel</code> in your folder. Or drag & drop via the Vercel dashboard. Fastest CDN globally.</div>
+        <span class="host-badge hb-free">Free Forever</span>
+      </div>
+      <div class="host-card">
+        <div class="host-name">🔥 Cloudflare Pages</div>
+        <div class="host-desc">Upload via Cloudflare dashboard. Unlimited bandwidth and requests on free tier. Zero cold starts.</div>
+        <span class="host-badge hb-free">Free Forever</span>
+      </div>
+    </div>
+    <div style="margin-top:14px;padding:12px 14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border)">
+      <p style="font-size:12px;color:var(--muted);line-height:1.7">
+        💡 <strong style="color:var(--text)">Quickest start:</strong> Use <strong style="color:#4ade80">Netlify Drop</strong> — go to <code>netlify.com/drop</code>, drag your two HTML files, and get a URL in 30 seconds. No account required.
+      </p>
+    </div>
+  </div>
+
+</div>
+
+<div id="toast">✅ URL Copied!</div>
+
+<script>
+let selectedTheme = 'neon';
+let currentTab = 'twitch';
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.ptab').forEach(t => t.classList.remove('active'));
+  document.querySelector(`.ptab.${tab}`).classList.add('active');
+  document.querySelectorAll('.platform-section').forEach(s => s.classList.remove('active'));
+  document.getElementById(`section-${tab}`).classList.add('active');
+  buildUrl();
+}
+
+function selectTheme(el) {
+  document.querySelectorAll('.theme-swatch').forEach(s => s.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedTheme = el.dataset.val;
+  buildUrl();
+}
+
+function rangeUpdate(input, labelId, suffix) {
+  const label = document.getElementById(labelId);
+  if (label) label.textContent = input.value + suffix;
+  const pct = ((input.value - input.min) / (input.max - input.min)) * 100;
+  input.style.setProperty('--pct', pct + '%');
+}
+
+/* init range visuals */
+document.querySelectorAll('input[type=range]').forEach(r => {
+  const pct = ((r.value - r.min) / (r.max - r.min)) * 100;
+  r.style.setProperty('--pct', pct + '%');
+});
+
+function buildUrl() {
+  const base = location.href.replace('index.html','') + 'overlay.html';
+  const p = new URLSearchParams();
+
+  const twitch = document.getElementById('twitch').value.trim();
+  const yt_key = document.getElementById('yt_key').value.trim();
+  const yt_vid = document.getElementById('yt_vid').value.trim();
+  const kick   = document.getElementById('kick').value.trim();
+
+  if (twitch)         p.set('twitch', twitch);
+  if (yt_key)         p.set('yt_key', yt_key);
+  if (yt_vid)         p.set('yt_vid', yt_vid);
+  if (kick)           p.set('kick', kick);
+
+  p.set('theme', selectedTheme);
+  p.set('anim',  document.getElementById('anim').value);
+  p.set('pos',   document.getElementById('pos').value);
+  p.set('size',  document.getElementById('size').value);
+  p.set('dur',   document.getElementById('dur').value);
+  p.set('max',   document.getElementById('max').value);
+  if (!document.getElementById('status').checked) p.set('status', '0');
+
+  const hasSource = twitch || (yt_key && yt_vid) || kick;
+  const urlEl = document.getElementById('url-out');
+  if (hasSource) {
+    urlEl.textContent = base + '?' + p.toString();
+  } else {
+    urlEl.textContent = '';
+  }
+}
+
+function copyUrl() {
+  const url = document.getElementById('url-out').textContent;
+  if (!url) { alert('Fill in at least one platform first!'); return; }
+  navigator.clipboard.writeText(url).then(() => {
+    const t = document.getElementById('toast');
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  });
+}
+
+function openPreview() {
+  const url = document.getElementById('url-out').textContent;
+  if (!url) { alert('Fill in at least one platform first!'); return; }
+  window.open(url, '_blank');
+}
+
+function openDemo() {
+  const base = location.href.replace('index.html','') + 'overlay.html';
+  const p = new URLSearchParams({ demo: '1', theme: selectedTheme,
+    anim: document.getElementById('anim').value,
+    pos:  document.getElementById('pos').value,
+    size: document.getElementById('size').value });
+  window.open(base + '?' + p.toString(), '_blank');
+}
+
+buildUrl();
+</script>
+</body>
+</html>
